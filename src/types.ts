@@ -330,37 +330,85 @@ export interface GetEventGroupsParams {
 }
 
 // ============================================
-// SmartCall RPA SDK 型定義
+// SmartCall RPA SDK 型定義（BeautyMerit形式準拠）
 // ============================================
 
 /** SmartCall RPA 予約操作タイプ */
-export type ReservationOperation = 'create' | 'cancel';
+export type ReservationOperation = 'create' | 'update' | 'cancel';
 
-/** SmartCall RPA 予約情報 */
+/** 予約枠情報 */
+export interface SmartCallSlotInfo {
+  /** 予約日（YYYY-MM-DD形式） */
+  date: string;
+  /** 開始時刻（HH:MM形式） */
+  start_at: string;
+  /** 終了時刻（HH:MM形式） */
+  end_at: string;
+  /** 所要時間（分） */
+  duration_min: number;
+}
+
+/** メニュー情報 */
+export interface SmartCallMenuInfo {
+  /** SmartCall側のメニューID */
+  menu_id: string;
+  /** 予約システム側のメニューID */
+  external_menu_id: string;
+  /** メニュー名 */
+  menu_name: string;
+}
+
+/** スタッフ情報 */
+export interface SmartCallStaffInfo {
+  /** SmartCall側のスタッフID */
+  staff_id: string;
+  /** 予約システム側のスタッフID */
+  external_staff_id: string;
+  /** スタッフ名 */
+  resource_name: string;
+  /** 指名区分: specific（指名）/ any（指名なし） */
+  preference: 'specific' | 'any';
+}
+
+/** 顧客情報 */
+export interface SmartCallCustomerInfo {
+  /** 顧客名 */
+  name: string;
+  /** 顧客電話番号 */
+  phone: string;
+  /** 備考 */
+  notes?: string;
+}
+
+/** SmartCall RPA 予約情報（BeautyMerit形式） */
 export interface SmartCallReservation {
   /** SmartCall側の予約識別子 */
   reservation_id: string;
   /** 操作種別 */
   operation: ReservationOperation;
-  /** 予約日（YYYY-MM-DD形式） */
-  date: string;
-  /** 予約時刻（HH:MM形式） */
-  time: string;
-  /** 顧客名 */
-  customer_name: string;
-  /** 顧客電話番号（オプション） */
-  customer_phone?: string;
-  /** 所要時間（分、デフォルト30） */
-  duration_min?: number;
-  /** 人数（デフォルト1） */
-  party_size?: number;
-  /** メニュー名 */
-  menu_name?: string;
-  /** 備考 */
-  notes?: string;
+  /** 予約システム側の予約ID（cancel時必須） */
+  external_reservation_id?: string;
+  /** 予約枠情報 */
+  slot: SmartCallSlotInfo;
+  /** メニュー情報 */
+  menu: SmartCallMenuInfo;
+  /** スタッフ情報 */
+  staff: SmartCallStaffInfo;
+  /** 顧客情報 */
+  customer: SmartCallCustomerInfo;
+  /** キャンセル理由（cancel時） */
+  cancel_reason?: string;
 }
 
-/** SmartCall RPA sync-cycleリクエスト */
+/** 同期期間設定 */
+export interface SmartCallReservationSync {
+  /** 同期開始日（YYYY-MM-DD形式） */
+  date_from: string;
+  /** 同期終了日（YYYY-MM-DD形式） */
+  date_to: string;
+}
+
+/** SmartCall RPA sync-cycleリクエスト（BeautyMerit形式） */
 export interface SmartCallSyncCycleRequest {
   /** ジョブ識別子（UUID形式） */
   job_id: string;
@@ -368,27 +416,35 @@ export interface SmartCallSyncCycleRequest {
   external_shop_id: string;
   /** 結果通知先URL */
   callback_url: string;
-  /** 同期開始日（YYYY-MM-DD形式） */
-  date_from?: string;
-  /** 同期終了日（YYYY-MM-DD形式） */
-  date_to?: string;
+  /** 同期期間設定 */
+  reservation_sync: SmartCallReservationSync;
   /** 予約操作リスト */
-  reservations?: SmartCallReservation[];
+  reservations: SmartCallReservation[];
 }
 
 /** SmartCall RPA 予約操作結果ステータス */
 export type ReservationResultStatus = 'success' | 'conflict' | 'failed';
 
-/** SmartCall RPA 予約操作結果 */
-export interface SmartCallReservationResult {
-  /** SmartCall側の予約ID */
-  reservation_id: string;
-  /** 操作ステータス */
+/** SmartCall RPA 予約操作結果詳細 */
+export interface SmartCallReservationResultDetail {
+  /** 結果ステータス */
   status: ReservationResultStatus;
   /** 外部システム側の予約ID（成功時） */
   external_reservation_id?: string;
+  /** エラーコード（失敗時） */
+  error_code?: string | null;
   /** エラーメッセージ（失敗時） */
-  error_message?: string;
+  error_message?: string | null;
+}
+
+/** SmartCall RPA 予約操作結果（BeautyMerit形式） */
+export interface SmartCallReservationResult {
+  /** SmartCall側の予約ID */
+  reservation_id: string;
+  /** 操作種別 */
+  operation: ReservationOperation;
+  /** 結果オブジェクト */
+  result: SmartCallReservationResultDetail;
 }
 
 /** SmartCall RPA 空き枠情報 */
@@ -397,25 +453,26 @@ export interface SmartCallAvailableSlot {
   date: string;
   /** 時刻（HH:MM形式） */
   time: string;
+  /** 所要時間（分） */
+  duration_min: number;
   /** 空き枠数 */
-  available_count: number;
+  stock: number;
 }
 
-/** SmartCall RPA ジョブステータス */
-export type SmartCallJobStatus = 'success' | 'partial_success' | 'failed';
-
-/** SmartCall RPA callbackレスポンス */
+/** SmartCall RPA callbackレスポンス（BeautyMerit形式） */
 export interface SmartCallCallbackResponse {
   /** 対応するジョブID */
   job_id: string;
   /** 店舗ID */
   external_shop_id: string;
-  /** ジョブ全体ステータス */
-  status: SmartCallJobStatus;
+  /** 同期完了日時（ISO 8601形式） */
+  synced_at: string;
   /** 各予約操作の結果 */
-  reservation_results?: SmartCallReservationResult[];
+  reservation_results: SmartCallReservationResult[];
+  /** 予約一覧（現在は空配列） */
+  reservations: unknown[];
   /** 空き枠情報 */
-  available_slots?: SmartCallAvailableSlot[];
+  available_slots: SmartCallAvailableSlot[];
   /** エラー詳細情報 */
   error?: {
     code: string;

@@ -3,6 +3,10 @@ import {
   EventGroup,
   SmartCallReservation,
   ReservationOperation,
+  SmartCallSlotInfo,
+  SmartCallMenuInfo,
+  SmartCallStaffInfo,
+  SmartCallCustomerInfo,
 } from './types';
 import { PaylightClient } from './client';
 
@@ -15,7 +19,7 @@ export interface ConvertOptions {
 }
 
 /**
- * PaylightのEventGroupをSmartCall予約形式に変換
+ * PaylightのEventGroupをSmartCall予約形式に変換（BeautyMerit形式）
  * @param eventGroup Paylightのイベントグループ
  * @param options 変換オプション
  * @returns SmartCall予約情報
@@ -28,14 +32,24 @@ export async function convertEventGroupToReservation(
 
   // 日付と時刻を抽出（JSTタイムゾーン対応）
   const fromDate = dayjs(eventGroup.from_at);
+  const toDate = dayjs(eventGroup.to_at);
   const date = fromDate.format('YYYY-MM-DD');
-  const time = fromDate.format('HH:mm');
+  const startAt = fromDate.format('HH:mm');
+  const endAt = toDate.format('HH:mm');
+  const durationMin = eventGroup.duration_by_minutes;
 
   // 顧客情報
   const customerName = eventGroup.customer?.name ?? '氏名 未設定';
 
-  // メニュー名を取得（最初のイベントの最初のメニュー）
-  const menuName = eventGroup.events[0]?.menus.treatment[0]?.overview ?? eventGroup.title;
+  // メニュー情報を取得（最初のイベントの最初のメニュー）
+  const firstMenu = eventGroup.events[0]?.menus.treatment[0];
+  const menuName = firstMenu?.overview ?? eventGroup.title;
+  const menuId = firstMenu?.id ? String(firstMenu.id) : '';
+
+  // スタッフ情報を取得（最初のイベントの最初のスタッフ）
+  const firstStaff = eventGroup.events[0]?.staffs[0];
+  const staffName = firstStaff?.name ?? '';
+  const staffId = firstStaff?.id ? String(firstStaff.id) : '';
 
   // [hint]customerIdがわかれば、paylightで管理する患者情報にアクセスできます。
   // https://clinic.pay-light.com/stores/${storeId}/customers/${customerId}/show
@@ -44,10 +58,10 @@ export async function convertEventGroupToReservation(
   const customerId = eventGroup.customer?.id;
 
   // clientとcustomerIdがある場合、APIから電話番号を取得
-  let customerPhone: string | undefined;
+  let customerPhone = '';
   if (client && customerId) {
     const customerDetail = await client.getCustomerDetail(customerId);
-    customerPhone = customerDetail.phone_number1 ?? undefined;
+    customerPhone = customerDetail.phone_number1 ?? '';
   }
 
   const customerSuffix = managementId && customerId
@@ -55,20 +69,43 @@ export async function convertEventGroupToReservation(
     : '';
   const reservationId = `paylight-${eventGroup.id}${customerSuffix}`;
 
+  // slot情報を構築
+  const slot: SmartCallSlotInfo = {
+    date,
+    start_at: startAt,
+    end_at: endAt,
+    duration_min: durationMin,
+  };
+
+  // menu情報を構築
+  const menu: SmartCallMenuInfo = {
+    menu_id: menuId,
+    external_menu_id: menuId,
+    menu_name: menuName,
+  };
+
+  // staff情報を構築
+  const staff: SmartCallStaffInfo = {
+    staff_id: staffId,
+    external_staff_id: staffId,
+    resource_name: staffName,
+    preference: staffId ? 'specific' : 'any',
+  };
+
+  // customer情報を構築
+  const customer: SmartCallCustomerInfo = {
+    name: customerName,
+    phone: customerPhone,
+  };
+
   const result: SmartCallReservation = {
     reservation_id: reservationId,
     operation,
-    date,
-    time,
-    customer_name: customerName,
-    duration_min: eventGroup.duration_by_minutes,
-    notes: menuName,
+    slot,
+    menu,
+    staff,
+    customer,
   };
-
-  // customer_phoneは設定されている場合のみ含める
-  if (customerPhone) {
-    result.customer_phone = customerPhone;
-  }
 
   return result;
 }
