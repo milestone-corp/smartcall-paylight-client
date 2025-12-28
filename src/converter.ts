@@ -1,4 +1,6 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 import {
   EventGroup,
   SmartCallReservation,
@@ -9,6 +11,10 @@ import {
   SmartCallCustomerInfo,
 } from './types';
 import { PaylightClient } from './client';
+
+// dayjsのタイムゾーンプラグインを有効化
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 /** 変換オプション */
 export interface ConvertOptions {
@@ -31,8 +37,9 @@ export async function convertEventGroupToReservation(
   const { operation = 'create', client } = options;
 
   // 日付と時刻を抽出（JSTタイムゾーン対応）
-  const fromDate = dayjs(eventGroup.from_at);
-  const toDate = dayjs(eventGroup.to_at);
+  // Paylightの from_at/to_at はUTC（+00:00）で返されるため、JST（Asia/Tokyo）に変換
+  const fromDate = dayjs(eventGroup.from_at).tz('Asia/Tokyo');
+  const toDate = dayjs(eventGroup.to_at).tz('Asia/Tokyo');
   const date = fromDate.format('YYYY-MM-DD');
   const startAt = fromDate.format('HH:mm');
   const endAt = toDate.format('HH:mm');
