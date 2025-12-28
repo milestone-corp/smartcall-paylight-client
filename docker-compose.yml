@@ -1,0 +1,9 @@
+services:
+  paylight-client:
+    build: .
+    container_name: paylight-client
+    env_file:
+      - .env
+    volumes:
+      - ./output:/app/output
+    command: npm start

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { writeFileSync, mkdirSync } from 'fs';
 import { PaylightClient } from './client';
 import { convertToReservationsJson } from './converter';
 
@@ -128,6 +129,15 @@ async function main() {
       client,
     });
     console.log(reservationsJson);
+
+    // JSONファイルに保存
+    const outputDir = './output';
+    mkdirSync(outputDir, { recursive: true });
+
+    const timestamp = dayjs().format('YYYYMMDD_HHmmss');
+    const filename = `${outputDir}/reservations_${dateFrom}_${dateTo}_${timestamp}.json`;
+    writeFileSync(filename, reservationsJson, 'utf-8');
+    console.log(`\n保存先: ${filename}`);
 
   } catch (error) {
     console.error('エラーが発生しました:', error);
