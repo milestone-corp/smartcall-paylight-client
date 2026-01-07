@@ -103,6 +103,7 @@ export async function convertEventGroupToReservation(
   const customer: SmartCallCustomerInfo = {
     name: customerName,
     phone: customerPhone,
+    patient_id: managementId || undefined,
   };
 
   const result: SmartCallReservation = {

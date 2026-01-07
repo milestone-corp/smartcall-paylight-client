@@ -376,6 +376,8 @@ export interface SmartCallCustomerInfo {
   name: string;
   /** 顧客電話番号 */
   phone: string;
+  /** 患者ID（診察券番号） */
+  patient_id?: string;
   /** 備考 */
   notes?: string;
 }
